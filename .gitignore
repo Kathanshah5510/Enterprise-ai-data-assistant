@@ -1,0 +1,50 @@
+# Virtual Environment
+eaida_venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment Variables
+.env
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Docker
+*.pid
+
+# FAISS Indexes
+embeddings/faiss/
+
+# LangSmith
+.langsmith/
+
+# Local Database
+*.db
+
+# Temporary Files
+*.tmp
