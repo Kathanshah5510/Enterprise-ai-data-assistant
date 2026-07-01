@@ -11,7 +11,8 @@ app.include_router(health_router)
 
 
 @app.get("/")
-def home():
+def home() -> dict[str, str]:
+    """Get API status."""
     return {
         "message": "Enterprise AI Data Assistant API is running!"
     }
