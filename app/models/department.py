@@ -8,6 +8,7 @@ from app.models.base_model import BaseModel
 
 if TYPE_CHECKING:
     from app.models.employee import Employee
+    from app.models.project import Project
 
 
 class Department(BaseModel):
@@ -34,5 +35,8 @@ class Department(BaseModel):
 
     # Relationships
     employees: Mapped[list[Employee]] = relationship(
+        back_populates="department",
+    )
+    projects: Mapped[list[Project]] = relationship(
         back_populates="department",
     )
