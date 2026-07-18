@@ -8,7 +8,7 @@
 - [x] SQLAlchemy
 - [x] Alembic configuration
 - [x] Initial migration
-- [ ] Seed data
+- [x] Seed data
 - [ ] JWT Authentication
 - [ ] RBAC
 - [ ] Departments API
