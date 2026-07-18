@@ -9,6 +9,7 @@
 - [x] Alembic configuration
 - [x] Initial migration
 - [x] Seed data
+- [x] Business models (Project, Budget, ProjectAssignment)
 - [ ] JWT Authentication
 - [ ] RBAC
 - [ ] Departments API

@@ -9,6 +9,15 @@ All notable changes to this project will be documented here.
 - All primary key constraints (UUID), foreign key constraints, unique indexes, and non-unique indexes applied
 - `alembic_version` table tracking migration state at `head`
 
+### Added — Business Models
+- `app/models/project.py`: Project model (name, status, start/end dates, department FK)
+- `app/models/budget.py`: Budget model (total_amount, spent_amount, fiscal_year; one-per-project via unique FK)
+- `app/models/project_assignment.py`: ProjectAssignment model (project FK, employee FK, role; composite unique constraint)
+- Migration `53347362076e`: creates `projects`, `budgets`, `project_assignments` tables with all indexes and constraints
+- `Department.projects` and `Employee.project_assignments` back-references added
+- Seed extended: 10 projects, 10 budgets (2 over-budget), 39 cross-department assignments
+- `scripts/seed.py` updated with separate idempotency guard for project data
+
 ### Added — Seed Data
 - `scripts/seed.py`: idempotent seed script for NovaTech Solutions demo data
 - 5 roles: admin, manager, hr, finance, employee

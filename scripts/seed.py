@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy.orm import Session
 
 from app.database.connection import SessionLocal
-from app.models import Department, Employee, Role, User
+from app.models import Budget, Department, Employee, Project, ProjectAssignment, Role, User
 
 
 # ---------------------------------------------------------------------------
@@ -32,6 +32,10 @@ def _hash_password(password: str) -> str:
 
 def _is_seeded(db: Session) -> bool:
     return db.query(Role).first() is not None
+
+
+def _are_projects_seeded(db: Session) -> bool:
+    return db.query(Project).first() is not None
 
 
 # ---------------------------------------------------------------------------
@@ -298,34 +302,199 @@ def seed_users(
 
 
 # ---------------------------------------------------------------------------
+# Projects, Budgets, Project Assignments
+# ---------------------------------------------------------------------------
+
+def seed_projects_budgets_assignments(
+    db: Session,
+    depts: dict[str, Department],
+    employees: dict[str, Employee],
+) -> None:
+    """
+    Seed 10 projects, 10 budgets, and 39 project assignments.
+    2 projects are intentionally over budget for AI query variety.
+    """
+    # ── Projects ─────────────────────────────────────────────────────────────
+    # (name, description, status, start_date, end_date, dept_key)
+    project_records = [
+        ("AI Platform Migration",
+         "Migrate legacy AI workloads to a unified cloud-native platform.",
+         "ACTIVE", date(2024, 1, 15), date(2024, 12, 31), "Engineering"),
+        ("Cloud Infrastructure Upgrade",
+         "Upgrade on-premise servers to AWS with auto-scaling and DR.",
+         "ACTIVE", date(2024, 3, 1), date(2024, 9, 30), "Engineering"),
+        ("ERP System Rollout",
+         "Deploy company-wide ERP to replace disparate finance tools.",
+         "ACTIVE", date(2024, 2, 1), date(2024, 11, 30), "Finance"),
+        ("Annual Audit 2025",
+         "Internal and external financial audit for fiscal year 2025.",
+         "COMPLETED", date(2025, 1, 5), date(2025, 3, 15), "Finance"),
+        ("Employee Onboarding Portal",
+         "Self-service portal for new hire onboarding and document management.",
+         "ACTIVE", date(2024, 4, 1), date(2024, 10, 31), "HR"),
+        ("Brand Refresh Campaign",
+         "Redesign brand identity and launch updated digital presence.",
+         "ACTIVE", date(2024, 5, 1), date(2024, 12, 31), "Marketing"),
+        ("Q4 2024 Sales Drive",
+         "Targeted outreach and incentive program to hit Q4 revenue targets.",
+         "COMPLETED", date(2024, 10, 1), date(2024, 12, 31), "Sales"),
+        ("CRM Integration",
+         "Integrate Salesforce CRM with internal data warehouse.",
+         "ACTIVE", date(2024, 6, 1), date(2025, 3, 31), "Sales"),
+        ("Supply Chain Optimization",
+         "Reduce procurement lead times and inventory carrying costs.",
+         "ON_HOLD", date(2024, 3, 15), None, "Operations"),
+        ("Customer Portal v2",
+         "Next-generation self-service portal with AI-powered ticket routing.",
+         "PLANNING", date(2025, 1, 1), None, "Customer Support"),
+    ]
+
+    projects: dict[str, Project] = {}
+    for name, desc, status, start, end, dept_key in project_records:
+        project = Project(
+            name=name,
+            description=desc,
+            status=status,
+            start_date=start,
+            end_date=end,
+            department_id=depts[dept_key].id,
+        )
+        db.add(project)
+        projects[name] = project
+    db.flush()
+
+    # ── Budgets ───────────────────────────────────────────────────────────────
+    # (project_name, total_amount, spent_amount, fiscal_year)
+    # Projects 2 and 5 are over budget (spent > total).
+    budget_records = [
+        ("AI Platform Migration",       Decimal("500000.00"), Decimal("480000.00"), 2024),
+        ("Cloud Infrastructure Upgrade",Decimal("300000.00"), Decimal("342500.00"), 2024),  # OVER BUDGET
+        ("ERP System Rollout",          Decimal("250000.00"), Decimal("190000.00"), 2024),
+        ("Annual Audit 2025",           Decimal("80000.00"),  Decimal("75200.00"),  2025),
+        ("Employee Onboarding Portal",  Decimal("120000.00"), Decimal("138000.00"), 2024),  # OVER BUDGET
+        ("Brand Refresh Campaign",      Decimal("200000.00"), Decimal("155000.00"), 2024),
+        ("Q4 2024 Sales Drive",         Decimal("150000.00"), Decimal("143000.00"), 2024),
+        ("CRM Integration",             Decimal("180000.00"), Decimal("92000.00"),  2024),
+        ("Supply Chain Optimization",   Decimal("220000.00"), Decimal("48000.00"),  2024),
+        ("Customer Portal v2",          Decimal("160000.00"), Decimal("8000.00"),   2025),
+    ]
+
+    for project_name, total, spent, fiscal_year in budget_records:
+        budget = Budget(
+            project_id=projects[project_name].id,
+            total_amount=total,
+            spent_amount=spent,
+            fiscal_year=fiscal_year,
+        )
+        db.add(budget)
+    db.flush()
+
+    # ── Project Assignments ───────────────────────────────────────────────────
+    # (project_name, emp_num, role, assigned_date, end_date)
+    assignment_records = [
+        # AI Platform Migration — Engineering (cross: Finance analyst)
+        ("AI Platform Migration",        "EMP001", "Lead",              date(2024,  1, 15), None),
+        ("AI Platform Migration",        "EMP002", "Developer",         date(2024,  1, 15), None),
+        ("AI Platform Migration",        "EMP009", "ML Engineer",       date(2024,  1, 15), None),
+        ("AI Platform Migration",        "EMP008", "Data Engineer",     date(2024,  1, 15), None),
+        ("AI Platform Migration",        "EMP011", "Analyst",           date(2024,  2,  1), None),
+        # Cloud Infrastructure Upgrade — Engineering
+        ("Cloud Infrastructure Upgrade", "EMP001", "Lead",              date(2024,  3,  1), None),
+        ("Cloud Infrastructure Upgrade", "EMP004", "DevOps Engineer",   date(2024,  3,  1), None),
+        ("Cloud Infrastructure Upgrade", "EMP006", "Developer",         date(2024,  3,  1), None),
+        ("Cloud Infrastructure Upgrade", "EMP003", "Developer",         date(2024,  3,  1), None),
+        # ERP System Rollout — Finance (cross: Operations, Engineering)
+        ("ERP System Rollout",           "EMP010", "Lead",              date(2024,  2,  1), None),
+        ("ERP System Rollout",           "EMP011", "Analyst",           date(2024,  2,  1), None),
+        ("ERP System Rollout",           "EMP012", "Analyst",           date(2024,  2,  1), None),
+        ("ERP System Rollout",           "EMP031", "Analyst",           date(2024,  2, 15), None),
+        ("ERP System Rollout",           "EMP002", "Developer",         date(2024,  2, 15), None),
+        # Annual Audit 2025 — Finance
+        ("Annual Audit 2025",            "EMP010", "Lead",              date(2025,  1,  5), date(2025, 3, 15)),
+        ("Annual Audit 2025",            "EMP014", "Analyst",           date(2025,  1,  5), date(2025, 3, 15)),
+        ("Annual Audit 2025",            "EMP013", "Analyst",           date(2025,  1,  5), date(2025, 3, 15)),
+        # Employee Onboarding Portal — HR (cross: Engineering)
+        ("Employee Onboarding Portal",   "EMP015", "Lead",              date(2024,  4,  1), None),
+        ("Employee Onboarding Portal",   "EMP016", "Analyst",           date(2024,  4,  1), None),
+        ("Employee Onboarding Portal",   "EMP007", "Developer",         date(2024,  4,  1), None),
+        ("Employee Onboarding Portal",   "EMP005", "QA",                date(2024,  4,  1), None),
+        # Brand Refresh Campaign — Marketing
+        ("Brand Refresh Campaign",       "EMP019", "Lead",              date(2024,  5,  1), None),
+        ("Brand Refresh Campaign",       "EMP020", "Manager",           date(2024,  5,  1), None),
+        ("Brand Refresh Campaign",       "EMP023", "Designer",          date(2024,  5,  1), None),
+        ("Brand Refresh Campaign",       "EMP021", "Content Strategist",date(2024,  5,  1), None),
+        # Q4 2024 Sales Drive — Sales
+        ("Q4 2024 Sales Drive",          "EMP024", "Lead",              date(2024, 10,  1), date(2024, 12, 31)),
+        ("Q4 2024 Sales Drive",          "EMP027", "Manager",           date(2024, 10,  1), date(2024, 12, 31)),
+        ("Q4 2024 Sales Drive",          "EMP025", "Sales Executive",   date(2024, 10,  1), date(2024, 12, 31)),
+        ("Q4 2024 Sales Drive",          "EMP026", "Account Manager",   date(2024, 10,  1), date(2024, 12, 31)),
+        # CRM Integration — Sales (cross: Engineering)
+        ("CRM Integration",              "EMP024", "Lead",              date(2024,  6,  1), None),
+        ("CRM Integration",              "EMP027", "Manager",           date(2024,  6,  1), None),
+        ("CRM Integration",              "EMP006", "Developer",         date(2024,  6,  1), None),
+        ("CRM Integration",              "EMP007", "Developer",         date(2024,  6,  1), None),
+        # Supply Chain Optimization — Operations
+        ("Supply Chain Optimization",    "EMP030", "Lead",              date(2024,  3, 15), None),
+        ("Supply Chain Optimization",    "EMP031", "Manager",           date(2024,  3, 15), None),
+        ("Supply Chain Optimization",    "EMP032", "Analyst",           date(2024,  3, 15), None),
+        # Customer Portal v2 — Customer Support
+        ("Customer Portal v2",           "EMP034", "Lead",              date(2025,  1,  1), None),
+        ("Customer Portal v2",           "EMP037", "Manager",           date(2025,  1,  1), None),
+        ("Customer Portal v2",           "EMP035", "Analyst",           date(2025,  1,  1), None),
+    ]
+
+    for project_name, emp_num, role, assigned_date, end_date in assignment_records:
+        assignment = ProjectAssignment(
+            project_id=projects[project_name].id,
+            employee_id=employees[emp_num].id,
+            role=role,
+            assigned_date=assigned_date,
+            end_date=end_date,
+        )
+        db.add(assignment)
+    db.flush()
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 def main() -> None:
     db: Session = SessionLocal()
     try:
-        if _is_seeded(db):
-            print("Database already seeded. Skipping.")
-            return
+        if not _is_seeded(db):
+            print("Seeding roles...")
+            roles = seed_roles(db)
+            print(f"  {len(roles)} roles created.")
 
-        print("Seeding roles...")
-        roles = seed_roles(db)
-        print(f"  {len(roles)} roles created.")
+            print("Seeding departments...")
+            depts = seed_departments(db)
+            print(f"  {len(depts)} departments created.")
 
-        print("Seeding departments...")
-        depts = seed_departments(db)
-        print(f"  {len(depts)} departments created.")
+            print("Seeding employees...")
+            employees = seed_employees(db, depts)
+            print(f"  {len(employees)} employees created.")
 
-        print("Seeding employees...")
-        employees = seed_employees(db, depts)
-        print(f"  {len(employees)} employees created.")
+            print("Seeding users...")
+            seed_users(db, roles, employees)
+            print("  9 users created.")
 
-        print("Seeding users...")
-        seed_users(db, roles, employees)
-        print("  9 users created.")
+            db.commit()
+            print("Base seed complete.\n")
+        else:
+            print("Base data already present.")
+            depts     = {d.name: d for d in db.query(Department).all()}
+            employees = {e.employee_number: e for e in db.query(Employee).all()}
 
-        db.commit()
-        print("\nSeed complete. NovaTech Solutions is ready.")
+        if not _are_projects_seeded(db):
+            print("Seeding projects, budgets, and assignments...")
+            seed_projects_budgets_assignments(db, depts, employees)
+            db.commit()
+            print("  10 projects, 10 budgets, 39 assignments created.")
+        else:
+            print("Projects already present.")
+
+        print("\nNovaTech Solutions is ready.")
 
     except Exception:
         db.rollback()

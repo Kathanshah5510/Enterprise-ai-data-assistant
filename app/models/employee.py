@@ -11,6 +11,7 @@ from app.models.base_model import BaseModel
 
 if TYPE_CHECKING:
     from app.models.department import Department
+    from app.models.project_assignment import ProjectAssignment
 
 
 class Employee(BaseModel):
@@ -90,4 +91,7 @@ class Employee(BaseModel):
     )
     direct_reports: Mapped[list[Employee]] = relationship(
         back_populates="manager",
+    )
+    project_assignments: Mapped[list[ProjectAssignment]] = relationship(
+        back_populates="employee",
     )
