@@ -7,7 +7,7 @@
 - [x] PostgreSQL
 - [x] SQLAlchemy
 - [x] Alembic configuration
-- [ ] Initial migration
+- [x] Initial migration
 - [ ] Seed data
 - [ ] JWT Authentication
 - [ ] RBAC
