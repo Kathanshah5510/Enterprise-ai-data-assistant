@@ -104,8 +104,20 @@ def run_query(
     try:
         final_state: AgentState = query_agent.invoke(initial_state)
     except Exception as exc:
-        # Catch LLM / embedding failures (e.g. missing API key)
         final_state = {**initial_state, "error": str(exc)}
+
+    # ── Determine audit status ────────────────────────────────────────────────
+    is_blocked = bool(final_state.get("validation_error"))
+    has_error = bool(final_state.get("error"))
+    if is_blocked:
+        action = "query_blocked"
+        audit_status = "blocked"
+    elif has_error:
+        action = "query_failed"
+        audit_status = "error"
+    else:
+        action = "query_executed"
+        audit_status = "success"
 
     # ── Persist user message ──────────────────────────────────────────────────
     user_msg = Message(
@@ -119,10 +131,12 @@ def run_query(
     result_payload: dict | None = (
         {"rows": final_state["results"]} if final_state["results"] else None
     )
+    sql_summary = final_state.get("sql_query") or ""
+    assistant_content = sql_summary if sql_summary else f"Could not generate SQL: {final_state.get('error') or final_state.get('validation_error') or 'unknown error'}"
     assistant_msg = Message(
         conversation_id=conv.id,
         role="assistant",
-        content=body.question,  # echoed — frontend uses sql_query + result_data
+        content=assistant_content,
         sql_query=final_state.get("sql_query") or None,
         result_data=result_payload,
         row_count=final_state.get("row_count") or 0,
@@ -133,21 +147,25 @@ def run_query(
     db.add(assistant_msg)
 
     # ── Audit log ─────────────────────────────────────────────────────────────
-    has_error = bool(final_state.get("error"))
-    action = "query_blocked" if final_state.get("validation_error") else (
-        "query_failed" if has_error else "query_executed"
-    )
     audit = AuditLog(
         user_id=current_user.id,
         conversation_id=conv.id,
         action=action,
         sql_query=final_state.get("sql_query") or None,
-        status="error" if has_error else "success",
-        error_message=final_state.get("error") or None,
+        status=audit_status,
+        error_message=final_state.get("error") or final_state.get("validation_error") or None,
         execution_time_ms=final_state.get("execution_time_ms") or None,
     )
     db.add(audit)
-    db.commit()
+
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to persist query results",
+        ) from exc
 
     return QueryResponse(
         question=body.question,

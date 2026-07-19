@@ -14,7 +14,7 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 
 @router.get("/", response_model=list[ProjectResponse])
 def list_projects(
-    skip: int = 0,
+    skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, le=100),
     _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -63,8 +63,12 @@ def update_project(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(project, field, value)
-    db.commit()
-    db.refresh(project)
+    try:
+        db.commit()
+        db.refresh(project)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Project update conflict")
     return project
 
 
@@ -78,4 +82,11 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     db.delete(project)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete project with existing budget or assignments",
+        )

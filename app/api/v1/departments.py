@@ -14,7 +14,7 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 
 @router.get("/", response_model=list[DepartmentResponse])
 def list_departments(
-    skip: int = 0,
+    skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, le=100),
     _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -82,4 +82,11 @@ def delete_department(
     if not dept:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
     db.delete(dept)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete department with existing employees or projects",
+        )

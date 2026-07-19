@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from langchain_community.vectorstores import FAISS
@@ -10,6 +11,7 @@ from app.services.schema_service import get_schema_documents
 
 _INDEX_PATH = Path(settings.FAISS_INDEX_PATH)
 _store: FAISS | None = None
+_store_lock = threading.Lock()
 
 
 def _make_embeddings() -> GoogleGenerativeAIEmbeddings:
@@ -41,20 +43,24 @@ def _load_store() -> FAISS:
     if _store is not None:
         return _store
 
-    embeddings = _make_embeddings()
-    if _INDEX_PATH.exists():
-        _store = FAISS.load_local(
-            str(_INDEX_PATH),
-            embeddings,
-            allow_dangerous_deserialization=True,
-        )
-    else:
-        # Auto-build on first use if index is missing
-        docs = get_schema_documents()
-        _store = FAISS.from_texts(docs, embeddings)
-        _INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _store.save_local(str(_INDEX_PATH))
-        print(f"FAISS index auto-built: {len(docs)} table(s) → {_INDEX_PATH}")
+    with _store_lock:
+        if _store is not None:
+            return _store
+
+        embeddings = _make_embeddings()
+        if _INDEX_PATH.exists():
+            _store = FAISS.load_local(
+                str(_INDEX_PATH),
+                embeddings,
+                allow_dangerous_deserialization=True,
+            )
+        else:
+            # Auto-build on first use if index is missing
+            docs = get_schema_documents()
+            _store = FAISS.from_texts(docs, embeddings)
+            _INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _store.save_local(str(_INDEX_PATH))
+            print(f"FAISS index auto-built: {len(docs)} table(s) → {_INDEX_PATH}")
 
     return _store
 

@@ -14,6 +14,9 @@ _DANGEROUS_FUNCS = re.compile(
     re.IGNORECASE,
 )
 
+# Matches single-line SQL comments (-- ...) to strip before keyword scanning.
+_INLINE_COMMENT = re.compile(r"--[^\n]*")
+
 
 def validate_sql(sql: str) -> tuple[bool, str]:
     """
@@ -29,11 +32,16 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     if first_word not in ("SELECT", "WITH"):
         return False, f"Only SELECT queries are allowed. Got: {first_word}"
 
-    match = _FORBIDDEN.search(stripped)
+    # Strip inline comments before checking forbidden keywords so that
+    # legitimate comments containing words like ANALYZE or COMMENT don't
+    # trigger false positives.
+    sql_no_comments = _INLINE_COMMENT.sub("", stripped)
+
+    match = _FORBIDDEN.search(sql_no_comments)
     if match:
         return False, f"Forbidden keyword detected: {match.group().upper()}"
 
-    match = _DANGEROUS_FUNCS.search(stripped)
+    match = _DANGEROUS_FUNCS.search(sql_no_comments)
     if match:
         return False, f"Dangerous function detected: {match.group()}"
 

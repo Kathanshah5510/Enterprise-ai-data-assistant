@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import threading
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.core.config import settings
 
 _llm: ChatGoogleGenerativeAI | None = None
+_llm_lock = threading.Lock()
 
 _SQL_PROMPT = """\
 You are an expert PostgreSQL query writer for an enterprise HR and project management system called NovaTech Solutions.
@@ -50,16 +53,18 @@ Chart type:"""
 def _get_llm() -> ChatGoogleGenerativeAI:
     global _llm
     if _llm is None:
-        if not settings.GEMINI_API_KEY:
-            raise RuntimeError(
-                "GEMINI_API_KEY is not configured. "
-                "Set it in your .env file to enable AI features."
-            )
-        _llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=0,
-        )
+        with _llm_lock:
+            if _llm is None:
+                if not settings.GEMINI_API_KEY:
+                    raise RuntimeError(
+                        "GEMINI_API_KEY is not configured. "
+                        "Set it in your .env file to enable AI features."
+                    )
+                _llm = ChatGoogleGenerativeAI(
+                    model="gemini-2.5-flash",
+                    google_api_key=settings.GEMINI_API_KEY,
+                    temperature=0,
+                )
     return _llm
 
 
@@ -91,6 +96,9 @@ def suggest_chart(sql: str, columns: list[str], row_count: int) -> str:
         sql=sql, columns=", ".join(columns), row_count=row_count
     )
     response = llm.invoke(prompt)
-    raw = response.content.strip().lower().split()[0]
+    words = response.content.strip().lower().split()
+    if not words:
+        return "table"
+    raw = words[0]
     valid = {"bar", "line", "pie", "table", "none"}
     return raw if raw in valid else "table"

@@ -17,7 +17,7 @@ _BUDGET_WRITE_ROLES = ("admin", "finance")
 
 @router.get("/", response_model=list[BudgetResponse])
 def list_budgets(
-    skip: int = 0,
+    skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, le=100),
     _: User = Depends(require_role(*_BUDGET_READ_ROLES)),
     db: Session = Depends(get_db),
@@ -66,6 +66,10 @@ def update_budget(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(budget, field, value)
-    db.commit()
-    db.refresh(budget)
+    try:
+        db.commit()
+        db.refresh(budget)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Budget update conflict")
     return budget

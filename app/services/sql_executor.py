@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import time
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import text
@@ -8,6 +11,16 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from app.core.config import settings
 from app.database.connection import get_readonly_session
+
+
+def _to_json_safe(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    return value
 
 
 def execute_query(sql: str) -> tuple[list[dict[str, Any]], int]:
@@ -28,7 +41,9 @@ def execute_query(sql: str) -> tuple[list[dict[str, Any]], int]:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
 
             keys = list(result.keys())
-            serialized = [dict(zip(keys, row)) for row in rows]
+            serialized = [
+                {k: _to_json_safe(v) for k, v in zip(keys, row)} for row in rows
+            ]
             return serialized, elapsed_ms
 
         except OperationalError as exc:

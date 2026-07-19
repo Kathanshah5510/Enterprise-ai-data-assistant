@@ -4,20 +4,24 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+_CURRENT_YEAR = 2026
+_MIN_YEAR = 2000
+_MAX_YEAR = _CURRENT_YEAR + 10
 
 
 class BudgetCreate(BaseModel):
     project_id: uuid.UUID
-    total_amount: Decimal
-    spent_amount: Decimal = Decimal("0.00")
-    fiscal_year: int
+    total_amount: Decimal = Field(..., ge=Decimal("0"))
+    spent_amount: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0"))
+    fiscal_year: int = Field(..., ge=_MIN_YEAR, le=_MAX_YEAR)
 
 
 class BudgetUpdate(BaseModel):
-    total_amount: Decimal | None = None
-    spent_amount: Decimal | None = None
-    fiscal_year: int | None = None
+    total_amount: Decimal | None = Field(default=None, ge=Decimal("0"))
+    spent_amount: Decimal | None = Field(default=None, ge=Decimal("0"))
+    fiscal_year: int | None = Field(default=None, ge=_MIN_YEAR, le=_MAX_YEAR)
 
 
 class BudgetResponse(BaseModel):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.security import (
@@ -17,6 +17,11 @@ from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserRe
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Dummy hash used to prevent username enumeration via timing side-channel.
+# verify_password is always called so response time is constant regardless of
+# whether the username exists.
+_DUMMY_HASH = "$2b$12$KIX/m1nBNjpH1HBzARL6Suj5e.JrqRVCnbNzqbCuaUFHzK9b2OvQC"
+
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
@@ -25,7 +30,11 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
         .filter(User.username == body.username)
         .first()
     )
-    if not user or not verify_password(body.password, user.hashed_password):
+    # Always run bcrypt to prevent timing-based username enumeration.
+    candidate_hash = user.hashed_password if user else _DUMMY_HASH
+    password_ok = verify_password(body.password, candidate_hash)
+
+    if not user or not password_ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
@@ -45,7 +54,7 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
 def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
     try:
         payload = decode_token(body.refresh_token)
-    except JWTError:
+    except (JWTError, RuntimeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",

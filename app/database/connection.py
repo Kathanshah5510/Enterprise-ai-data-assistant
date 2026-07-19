@@ -27,10 +27,13 @@ ReadonlySessionLocal = sessionmaker(
 
 
 def get_db() -> Generator[Session, None, None]:
-    """Yield a read-write database session."""
+    """Yield a read-write database session with explicit rollback on error."""
     db: Session = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 

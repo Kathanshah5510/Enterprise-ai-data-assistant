@@ -14,7 +14,7 @@ router = APIRouter(prefix="/employees", tags=["Employees"])
 
 @router.get("/", response_model=list[EmployeeResponse])
 def list_employees(
-    skip: int = 0,
+    skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, le=100),
     _: User = Depends(require_role("admin", "manager", "hr", "finance")),
     db: Session = Depends(get_db),
@@ -25,7 +25,7 @@ def list_employees(
 @router.get("/{employee_id}", response_model=EmployeeResponse)
 def get_employee(
     employee_id: str,
-    _: User = Depends(get_current_user),
+    _: User = Depends(require_role("admin", "manager", "hr", "finance")),
     db: Session = Depends(get_db),
 ) -> Employee:
     emp = db.query(Employee).filter(Employee.id == employee_id).first()
@@ -82,4 +82,11 @@ def delete_employee(
     if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     db.delete(emp)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete employee with existing project assignments",
+        )

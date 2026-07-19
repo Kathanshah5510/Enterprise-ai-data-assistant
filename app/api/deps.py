@@ -21,7 +21,7 @@ def get_current_user(
     """Validate Bearer token and return the active user with role eagerly loaded."""
     try:
         payload = decode_token(credentials.credentials)
-    except JWTError:
+    except (JWTError, RuntimeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -57,7 +57,8 @@ def get_current_user(
 def require_role(*allowed_roles: str) -> Callable[..., User]:
     """Return a FastAPI dependency that enforces role-based access control."""
     def dependency(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role.name not in allowed_roles:
+        role_name = current_user.role.name if current_user.role else None
+        if role_name not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",

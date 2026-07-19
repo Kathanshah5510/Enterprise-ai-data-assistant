@@ -20,7 +20,7 @@ router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 @router.get("/", response_model=list[ConversationResponse])
 def list_conversations(
-    skip: int = 0,
+    skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -59,13 +59,14 @@ def get_conversation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Conversation:
-    """Get a conversation and all its messages."""
+    """Get an active conversation and all its messages."""
     conv = (
         db.query(Conversation)
         .options(joinedload(Conversation.messages))
         .filter(
             Conversation.id == conversation_id,
             Conversation.user_id == current_user.id,
+            Conversation.is_active == True,
         )
         .first()
     )

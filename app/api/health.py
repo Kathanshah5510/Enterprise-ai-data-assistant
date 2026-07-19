@@ -3,7 +3,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.deps import get_current_user
 from app.database.connection import get_db
+from app.models import User
 
 router = APIRouter(
     prefix="/health",
@@ -18,8 +20,11 @@ def liveness() -> dict[str, str]:
 
 
 @router.get("/db")
-def database_health(db: Session = Depends(get_db)) -> dict[str, str | None]:
-    """Check database connection health."""
+def database_health(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> dict[str, str | None]:
+    """Check database connection health (requires authentication)."""
     try:
         version = db.execute(text("SELECT version();")).scalar()
         return {
