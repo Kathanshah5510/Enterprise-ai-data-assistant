@@ -6,6 +6,9 @@ from app.models.employee import Employee
 from app.models.project import Project
 from app.models.budget import Budget
 from app.models.project_assignment import ProjectAssignment
+from app.models.conversation import Conversation
+from app.models.message import Message
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "BaseModel",
@@ -16,4 +19,7 @@ __all__ = [
     "Project",
     "Budget",
     "ProjectAssignment",
+    "Conversation",
+    "Message",
+    "AuditLog",
 ]
