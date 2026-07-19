@@ -1,0 +1,30 @@
+# Run once before the first deployment, or after schema changes.
+# kubectl apply -f k8s/jobs/migrate.yaml -n eaida
+# kubectl wait --for=condition=complete job/migrate -n eaida --timeout=120s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: eaida
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: eaida/backend:latest
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: eaida-secrets
+                  key: DATABASE_URL
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+  backoffLimit: 3
