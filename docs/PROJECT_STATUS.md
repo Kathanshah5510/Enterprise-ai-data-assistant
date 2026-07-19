@@ -16,12 +16,12 @@
 - [x] Employees API
 - [x] Projects API
 - [x] Budgets API
-- [ ] LangChain
-- [ ] LangGraph
-- [ ] Schema RAG
-- [ ] Conversation memory
-- [ ] Query history
-- [ ] Audit logging
+- [x] LangChain
+- [x] LangGraph
+- [x] Schema RAG
+- [x] Conversation memory
+- [x] Query history
+- [x] Audit logging
 - [ ] React frontend
 - [ ] Charts
 - [ ] Docker

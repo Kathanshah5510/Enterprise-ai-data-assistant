@@ -8,6 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base_model import BaseModel
 
 if TYPE_CHECKING:
+    from app.models.audit_log import AuditLog
+    from app.models.conversation import Conversation
     from app.models.role import Role
 
 
@@ -47,7 +49,10 @@ class User(BaseModel):
         nullable=False,
     )
 
-    # Relationships
-    role: Mapped[Role] = relationship(
-        back_populates="users",
+    role: Mapped[Role] = relationship(back_populates="users")
+    conversations: Mapped[list[Conversation]] = relationship(
+        "Conversation", back_populates="user"
+    )
+    audit_logs: Mapped[list[AuditLog]] = relationship(
+        "AuditLog", back_populates="user"
     )
