@@ -15,6 +15,7 @@ __pycache__/
 
 # Environment Variables
 .env
+.env.docker
 
 # VS Code
 .vscode/
@@ -44,7 +45,10 @@ dist/
 *.pid
 
 # FAISS Indexes
-embeddings/faiss/
+embeddings/
+
+# Kubernetes secrets (never commit real values)
+k8s/secret.yaml
 
 # LangSmith
 .langsmith/

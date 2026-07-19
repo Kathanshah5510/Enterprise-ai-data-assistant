@@ -1,0 +1,15 @@
+eaida_venv/
+__pycache__/
+*.py[cod]
+*.pyc
+.env
+.git/
+.gitignore
+*.log
+embeddings/
+.pytest_cache/
+.coverage
+htmlcov/
+docs/
+frontend/
+*.md

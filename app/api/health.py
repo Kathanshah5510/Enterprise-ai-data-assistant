@@ -11,6 +11,12 @@ router = APIRouter(
 )
 
 
+@router.get("")
+def liveness() -> dict[str, str]:
+    """Lightweight liveness probe — no external dependencies."""
+    return {"status": "ok"}
+
+
 @router.get("/db")
 def database_health(db: Session = Depends(get_db)) -> dict[str, str | None]:
     """Check database connection health."""
