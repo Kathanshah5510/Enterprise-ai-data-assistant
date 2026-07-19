@@ -4,6 +4,21 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+### Added — React Frontend (Phase 9)
+- `frontend/` — Vite + React 18 + TypeScript + TailwindCSS project
+- `frontend/src/pages/Login.tsx` — JWT login form with error handling and demo credentials hint
+- `frontend/src/pages/Chat.tsx` — AI chat interface; sidebar conversation list, optimistic user messages, animated thinking indicator, suggestion chips on empty state, SQL collapsible block, Recharts chart/table display, Ctrl+Enter submit
+- `frontend/src/pages/Dashboard.tsx` — Live KPI cards (38 employees, 7 departments, 10 projects, $2.2M budget); bar charts for employees/salary per department; pie chart for project statuses; budget utilization progress bar; graceful 403 handling per role
+- `frontend/src/pages/History.tsx` — Paginated conversation list with delete; clicking opens conversation in Chat
+- `frontend/src/components/Sidebar.tsx` — Persistent sidebar with conversation list, new chat, nav links, user info/logout
+- `frontend/src/components/ChatMessage.tsx` — User bubble (indigo) / assistant card with SQL block, row count, timing, chart or table
+- `frontend/src/components/ResultTable.tsx` — Virtualized table with sticky header, null highlighting, overflow scroll
+- `frontend/src/components/ResultChart.tsx` — Recharts BarChart / LineChart / PieChart driven by `chart_suggestion`; generic column detection
+- `frontend/src/api/` — Typed axios client with JWT interceptors and auto-logout on 401; modules for auth, conversations, query, departments, employees, projects, budgets
+- `frontend/src/context/AuthContext.tsx` — React context for user/token state, login, logout
+- `frontend/vite.config.ts` — Vite dev proxy: `/auth` and `/api` forwarded to FastAPI on port 8000
+- `.claude/launch.json` — Dev server config for Claude Code browser preview
+
 ### Added — AI Layer & Conversation System (Phases 7–8)
 - `app/core/config.py`: added `READONLY_DATABASE_URL`, `SQL_TIMEOUT_SECONDS`, `SQL_ROW_LIMIT`, `FAISS_INDEX_PATH`, `CONVERSATION_HISTORY_LIMIT`
 - `app/database/connection.py`: added `readonly_engine`, `ReadonlySessionLocal`, `get_readonly_session()` context manager

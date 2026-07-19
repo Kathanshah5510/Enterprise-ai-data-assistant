@@ -22,7 +22,7 @@
 - [x] Conversation memory
 - [x] Query history
 - [x] Audit logging
-- [ ] React frontend
-- [ ] Charts
+- [x] React frontend
+- [x] Charts
 - [ ] Docker
 - [ ] Kubernetes
