@@ -4,6 +4,30 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
+### Fixed — Security Hardening & Robustness (Post Phase 10)
+- `auth.py`: always run bcrypt even for unknown usernames to prevent timing-based username enumeration
+- `deps.py`: catch `RuntimeError` from `decode_token` alongside `JWTError` → returns 401 instead of 500
+- `deps.py`: guard `role.name` access when role FK row is missing (prevents `AttributeError` → 500)
+- `employees.py`: `GET /{id}` now requires `admin/manager/hr/finance` role (was open to any authenticated user)
+- `health.py`: `GET /health/db` now requires authentication (prevented PostgreSQL version disclosure)
+- All list endpoints: `skip` parameter constrained to `ge=0` (negative values caused PostgreSQL `OFFSET` error → 500)
+- `departments/employees/projects`: `DELETE` wrapped in `try/except IntegrityError` → returns 409 instead of 500
+- `projects/budgets`: `PUT` commit wrapped in `try/except IntegrityError` → returns 409 instead of 500
+- `query.py`: `db.commit()` wrapped with rollback and 500 detail on failure
+- `llm_service.py`: guard empty LLM response in `suggest_chart` (prevented `IndexError` discarding valid results)
+- `connection.py`: `get_db` now calls `db.rollback()` on exception before closing session
+- `query.py`: assistant message `content` now stores the generated SQL instead of echoing the user's question
+- `query.py`: blocked queries now correctly log `audit_status='blocked'` (was incorrectly `'success'`)
+- `conversations.py`: `GET /{id}` now filters `is_active=True` (soft-deleted conversations were still fetchable)
+- `sql_validator.py`: strip inline SQL comments before forbidden-keyword scan (prevented false positives on `-- COMMENT`)
+- `schemas/employee.py`: `salary` requires `gt=0` (negative salaries were accepted)
+- `schemas/budget.py`: `total_amount`/`spent_amount` require `ge=0`; `fiscal_year` constrained to 2000–2036
+- `schemas/auth.py`: `username` and `password` require `min_length=1`
+- `schemas/conversation.py`: `title` requires `min_length=1, max_length=255`
+- `embeddings.py`: `_load_store` uses double-checked locking with `threading.Lock` (thread-safe on concurrent requests)
+- `llm_service.py`: `_get_llm` uses double-checked locking with `threading.Lock`
+- `sql_executor.py`: `Decimal`, `date`, `datetime`, `UUID` values converted to JSON-safe types before storage
+
 ### Added — React Frontend (Phase 9)
 - `frontend/` — Vite + React 18 + TypeScript + TailwindCSS project
 - `frontend/src/pages/Login.tsx` — JWT login form with error handling and demo credentials hint

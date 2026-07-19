@@ -24,5 +24,6 @@
 - [x] Audit logging
 - [x] React frontend
 - [x] Charts
-- [ ] Docker
-- [ ] Kubernetes
+- [x] Docker
+- [x] Kubernetes
+- [x] Security hardening & bug fixes
