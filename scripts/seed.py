@@ -6,7 +6,6 @@ Run from the project root:
 """
 from __future__ import annotations
 
-import hashlib
 import sys
 import uuid
 from datetime import date
@@ -17,17 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password as _hash_password
 from app.database.connection import SessionLocal
 from app.models import Budget, Department, Employee, Project, ProjectAssignment, Role, User
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _hash_password(password: str) -> str:
-    """SHA-256 placeholder — replaced with bcrypt in Phase 4 (Authentication)."""
-    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def _is_seeded(db: Session) -> bool:
